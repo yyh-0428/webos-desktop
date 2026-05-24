@@ -191,7 +191,8 @@ export default function IconMaker({ windowId }: IconMakerProps) {
       <canvas
         width={gridSize}
         height={gridSize}
-        style={{ width: size, height: size, imageRendering: 'pixelated' }}
+        className="border"
+        style={{ width: size, height: size, imageRendering: 'pixelated', borderColor: 'var(--border-default)' }}
         ref={(el) => {
           if (el) {
             const ectx = el.getContext('2d')!;
@@ -206,8 +207,6 @@ export default function IconMaker({ windowId }: IconMakerProps) {
             }
           }
         }}
-        className="border"
-        style={{ width: size, height: size, imageRendering: 'pixelated', borderColor: 'var(--border-default)' }}
       />
     );
   };

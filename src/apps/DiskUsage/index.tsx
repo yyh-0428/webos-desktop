@@ -27,7 +27,7 @@ function getFileColor(mimeType?: string): string {
   return FILE_COLORS[type] || FILE_COLORS.default;
 }
 
-function getFileIcon(node: FSNode) {
+function getFileIcon(node: { type: string; mimeType?: string }) {
   if (node.type === 'directory') return <Folder size={14} className="text-yellow-400" />;
   const mime = node.mimeType || '';
   if (mime.startsWith('image/')) return <FileImage size={14} className="text-green-400" />;
