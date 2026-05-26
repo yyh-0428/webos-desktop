@@ -8,6 +8,17 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useI18n } from '@/i18n';
 import * as Icons from 'lucide-react';
 
+const categoryColors: Record<string, { bg: string; icon: string }> = {
+  System: { bg: 'linear-gradient(135deg, #4a5568, #2d3748)', icon: '#e2e8f0' },
+  Accessories: { bg: 'linear-gradient(135deg, #5a6acd, #4c51bf)', icon: '#e0e7ff' },
+  Development: { bg: 'linear-gradient(135deg, #059669, #047857)', icon: '#d1fae5' },
+  Internet: { bg: 'linear-gradient(135deg, #2563eb, #1d4ed8)', icon: '#dbeafe' },
+  Office: { bg: 'linear-gradient(135deg, #d97706, #b45309)', icon: '#fef3c7' },
+  Multimedia: { bg: 'linear-gradient(135deg, #dc2626, #b91c1c)', icon: '#fee2e2' },
+  Graphics: { bg: 'linear-gradient(135deg, #7c3aed, #6d28d9)', icon: '#ede9fe' },
+  Games: { bg: 'linear-gradient(135deg, #db2777, #be185d)', icon: '#fce7f3' },
+};
+
 interface BottomTaskbarProps {
   onOpenAppMenu: () => void;
 }
@@ -80,7 +91,8 @@ export default function BottomTaskbar({ onOpenAppMenu }: BottomTaskbarProps) {
       <div className="flex items-center gap-1">
         {windows.filter((w) => !w.isMinimized).map((win) => {
           const app = getApp(win.appId);
-          const IconComp = app?.icon ? (Icons as unknown as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[app.icon] : null;
+          const IconComp = app?.icon ? (Icons as unknown as Record<string, React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>>)[app.icon] : null;
+          const catColor = app?.category ? (categoryColors[app.category] || categoryColors.System) : categoryColors.System;
           return (
             <motion.button
               key={win.id}
@@ -93,7 +105,11 @@ export default function BottomTaskbar({ onOpenAppMenu }: BottomTaskbarProps) {
                 win.isFocused ? 'border-b-2 border-[var(--accent-silver)]' : 'border-b-2 border-transparent'
               } hover:bg-white/10`}
             >
-              {IconComp && <IconComp size={22} className={win.isFocused ? 'text-white' : 'text-white/70'} />}
+              {IconComp && (
+                <div className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ background: catColor.bg }}>
+                  <IconComp size={16} style={{ color: catColor.icon }} />
+                </div>
+              )}
             </motion.button>
           );
         })}

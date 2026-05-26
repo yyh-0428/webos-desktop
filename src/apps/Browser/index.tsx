@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import {
   ArrowLeft, ArrowRight, RotateCw, Home, Plus, X, Star, Search, Globe,
-  Lock, Shield, MoreHorizontal, BookmarkPlus, ChevronDown,
+  Lock, Shield, MoreHorizontal, BookmarkPlus, ExternalLink, ChevronDown,
 } from 'lucide-react';
 
 interface Tab {
@@ -9,6 +9,7 @@ interface Tab {
   title: string;
   url: string;
   loading: boolean;
+  iframeError: boolean;
 }
 
 interface Bookmark {
@@ -23,24 +24,35 @@ interface HistoryEntry {
   time: number;
 }
 
+const SEARCH_ENGINES = [
+  { name: '百度', url: 'https://www.baidu.com/s?wd=', color: '#2932E1', icon: 'B' },
+  { name: 'Google', url: 'https://www.google.com/search?q=', color: '#4285F4', icon: 'G' },
+  { name: 'Bing', url: 'https://www.bing.com/search?q=', color: '#00809D', icon: 'B' },
+  { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=', color: '#DE5833', icon: 'D' },
+  { name: '搜狗', url: 'https://www.sogou.com/web?query=', color: '#FB6C2C', icon: 'S' },
+  { name: 'Yandex', url: 'https://yandex.com/search/?text=', color: '#FF0000', icon: 'Y' },
+];
+
 const defaultBookmarks: Bookmark[] = [
+  { name: '百度', url: 'https://www.baidu.com', favicon: 'B' },
   { name: 'Google', url: 'https://www.google.com', favicon: 'G' },
   { name: 'GitHub', url: 'https://github.com', favicon: 'GH' },
   { name: 'Wikipedia', url: 'https://www.wikipedia.org', favicon: 'W' },
   { name: 'YouTube', url: 'https://www.youtube.com', favicon: 'YT' },
-  { name: 'Reddit', url: 'https://www.reddit.com', favicon: 'R' },
+  { name: 'Bilibili', url: 'https://www.bilibili.com', favicon: 'B' },
+  { name: '知乎', url: 'https://www.zhihu.com', favicon: '知' },
   { name: 'Stack Overflow', url: 'https://stackoverflow.com', favicon: 'SO' },
 ];
 
 const quickLinks = [
+  { name: '百度', url: 'https://www.baidu.com', color: '#2932E1' },
   { name: 'Google', url: 'https://www.google.com', color: '#4285F4' },
-  { name: 'YouTube', url: 'https://www.youtube.com', color: '#FF0000' },
+  { name: 'Bilibili', url: 'https://www.bilibili.com', color: '#00A1D6' },
   { name: 'GitHub', url: 'https://github.com', color: '#333' },
+  { name: '知乎', url: 'https://www.zhihu.com', color: '#0066FF' },
+  { name: 'YouTube', url: 'https://www.youtube.com', color: '#FF0000' },
   { name: 'Wikipedia', url: 'https://www.wikipedia.org', color: '#636466' },
-  { name: 'Reddit', url: 'https://www.reddit.com', color: '#FF4500' },
   { name: 'Twitter', url: 'https://twitter.com', color: '#1DA1F2' },
-  { name: 'Amazon', url: 'https://www.amazon.com', color: '#FF9900' },
-  { name: 'Netflix', url: 'https://www.netflix.com', color: '#E50914' },
 ];
 
 let tabCounter = 1;
@@ -48,7 +60,7 @@ function newTabId() { return `tab-${tabCounter++}`; }
 
 export default function Browser({ windowId: _windowId }: { windowId: string }) {
   const [tabs, setTabs] = useState<Tab[]>([
-    { id: 'tab-0', title: '新标签页', url: '', loading: false },
+    { id: 'tab-0', title: '新标签页', url: '', loading: false, iframeError: false },
   ]);
   const [activeTabId, setActiveTabId] = useState('tab-0');
   const [inputUrl, setInputUrl] = useState('');
@@ -57,6 +69,8 @@ export default function Browser({ windowId: _windowId }: { windowId: string }) {
   const [currentHistory, setCurrentHistory] = useState<string[]>([]);
   const [bookmarks] = useState<Bookmark[]>(defaultBookmarks);
   const [showBookmarksBar, setShowBookmarksBar] = useState(true);
+  const [searchEngine, setSearchEngine] = useState(0);
+  const [showEngineMenu, setShowEngineMenu] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
@@ -74,18 +88,13 @@ export default function Browser({ windowId: _windowId }: { windowId: string }) {
       if (finalUrl.includes('.') && !finalUrl.includes(' ')) {
         finalUrl = 'https://' + finalUrl;
       } else {
-        finalUrl = `https://www.google.com/search?q=${encodeURIComponent(finalUrl)}`;
+        finalUrl = `${SEARCH_ENGINES[searchEngine].url}${encodeURIComponent(finalUrl)}`;
       }
     }
 
     const title = finalUrl.replace(/^https?:\/\//, '').split('/')[0] || '新标签页';
-    updateTab(activeTabId, { url: finalUrl, title, loading: true });
+    updateTab(activeTabId, { url: finalUrl, title, loading: true, iframeError: false });
     setInputUrl(finalUrl);
-
-    // Simulate loading
-    setTimeout(() => {
-      updateTab(activeTabId, { loading: false });
-    }, 800);
 
     // Update history
     setCurrentHistory(prev => {
@@ -101,7 +110,7 @@ export default function Browser({ windowId: _windowId }: { windowId: string }) {
 
   const addTab = () => {
     const id = newTabId();
-    setTabs(prev => [...prev, { id, title: '新标签页', url: '', loading: false }]);
+    setTabs(prev => [...prev, { id, title: '新标签页', url: '', loading: false, iframeError: false }]);
     setActiveTabId(id);
     setInputUrl('');
     setCurrentHistory([]);
@@ -126,9 +135,8 @@ export default function Browser({ windowId: _windowId }: { windowId: string }) {
       setHistoryIndex(newIndex);
       const url = currentHistory[newIndex];
       const title = url.replace(/^https?:\/\//, '').split('/')[0] || '新标签页';
-      updateTab(activeTabId, { url, title, loading: true });
+      updateTab(activeTabId, { url, title, loading: true, iframeError: false });
       setInputUrl(url);
-      setTimeout(() => updateTab(activeTabId, { loading: false }), 600);
     }
   };
 
@@ -138,23 +146,33 @@ export default function Browser({ windowId: _windowId }: { windowId: string }) {
       setHistoryIndex(newIndex);
       const url = currentHistory[newIndex];
       const title = url.replace(/^https?:\/\//, '').split('/')[0] || '新标签页';
-      updateTab(activeTabId, { url, title, loading: true });
+      updateTab(activeTabId, { url, title, loading: true, iframeError: false });
       setInputUrl(url);
-      setTimeout(() => updateTab(activeTabId, { loading: false }), 600);
     }
   };
 
   const refresh = () => {
     if (activeTab.url) {
-      updateTab(activeTabId, { loading: true });
-      setTimeout(() => updateTab(activeTabId, { loading: false }), 600);
+      updateTab(activeTabId, { loading: true, iframeError: false });
+      const iframe = document.getElementById(`iframe-${activeTabId}`) as HTMLIFrameElement;
+      if (iframe) {
+        iframe.src = activeTab.url;
+      }
     }
   };
 
   const goHome = () => {
-    updateTab(activeTabId, { url: '', title: '新标签页', loading: false });
+    updateTab(activeTabId, { url: '', title: '新标签页', loading: false, iframeError: false });
     setInputUrl('');
   };
+
+  const handleIframeLoad = useCallback((tabId: string) => {
+    updateTab(tabId, { loading: false });
+  }, [updateTab]);
+
+  const handleIframeError = useCallback((tabId: string) => {
+    updateTab(tabId, { loading: false, iframeError: true });
+  }, [updateTab]);
 
   const handleUrlKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') navigateTo(inputUrl);
@@ -169,7 +187,7 @@ export default function Browser({ windowId: _windowId }: { windowId: string }) {
   const isNewTab = !activeTab.url;
 
   return (
-    <div className="w-full h-full flex flex-col text-sm" style={{ background: 'var(--bg-workspace)' }}>
+    <div className="w-full h-full flex flex-col text-sm" style={{ background: 'var(--bg-workspace)' }} onClick={() => setShowEngineMenu(false)}>
       {/* Tab bar */}
       <div className="flex items-center h-9 px-1 gap-0.5" style={{ background: 'var(--bg-window)', borderBottom: '1px solid var(--border-default)' }}>
         {tabs.map(tab => (
@@ -236,9 +254,36 @@ export default function Browser({ windowId: _windowId }: { windowId: string }) {
             value={inputUrl}
             onChange={e => setInputUrl(e.target.value)}
             onKeyDown={handleUrlKeyDown}
-            placeholder="搜索或输入网址"
+            placeholder={`搜索（${SEARCH_ENGINES[searchEngine].name}）或输入网址`}
             className="flex-1 bg-transparent outline-none text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
           />
+          <div className="relative">
+            <button
+              onClick={() => setShowEngineMenu(!showEngineMenu)}
+              className="flex items-center gap-0.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+              title="切换搜索引擎"
+            >
+              <span className="text-[10px] font-bold">{SEARCH_ENGINES[searchEngine].icon}</span>
+              <ChevronDown size={10} />
+            </button>
+            {showEngineMenu && (
+              <div className="absolute top-full right-0 mt-1 rounded-lg py-1 z-50 min-w-[120px]"
+                style={{ background: 'var(--bg-window)', boxShadow: 'var(--shadow-md)', border: '1px solid var(--border-default)' }}
+                onClick={e => e.stopPropagation()}>
+                {SEARCH_ENGINES.map((eng, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setSearchEngine(i); setShowEngineMenu(false); }}
+                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--bg-hover)] transition-colors flex items-center gap-2"
+                    style={{ color: searchEngine === i ? 'var(--accent-silver)' : 'var(--text-primary)' }}
+                  >
+                    <span className="w-4 h-4 rounded text-[8px] text-white flex items-center justify-center font-bold" style={{ background: eng.color }}>{eng.icon}</span>
+                    {eng.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors">
             <BookmarkPlus size={14} />
           </button>
@@ -292,7 +337,7 @@ export default function Browser({ windowId: _windowId }: { windowId: string }) {
                 value={inputUrl}
                 onChange={e => setInputUrl(e.target.value)}
                 onKeyDown={handleUrlKeyDown}
-                placeholder="搜索网页或输入网址"
+                placeholder={`用 ${SEARCH_ENGINES[searchEngine].name} 搜索或输入网址`}
                 className="flex-1 bg-transparent outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
             </div>
@@ -342,28 +387,44 @@ export default function Browser({ windowId: _windowId }: { windowId: string }) {
           </div>
         ) : (
           /* Iframe content */
-          <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--bg-workspace)' }}>
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--bg-input)' }}>
-                <Shield size={28} className="text-[var(--accent-silver)]" />
+          <div className="w-full h-full relative" style={{ background: '#fff' }}>
+            <iframe
+              id={`iframe-${activeTabId}`}
+              src={activeTab.url}
+              className="w-full h-full border-0"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+              onLoad={() => handleIframeLoad(activeTabId)}
+              onError={() => handleIframeError(activeTabId)}
+              title={activeTab.title}
+            />
+            {activeTab.iframeError && (
+              <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'var(--bg-workspace)' }}>
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--bg-input)' }}>
+                    <Shield size={28} className="text-[var(--accent-silver)]" />
+                  </div>
+                  <h3 className="text-sm font-medium text-[var(--text-primary)] mb-1">无法加载此页面</h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-4 max-w-md truncate px-4">{activeTab.url}</p>
+                  <p className="text-[11px] text-[var(--text-muted)] max-w-xs">
+                    该网站可能阻止了嵌入式加载。您可以尝试在新标签页中打开。
+                  </p>
+                  <div className="flex gap-2 justify-center mt-4">
+                    <button onClick={() => { updateTab(activeTabId, { iframeError: false }); }}
+                      className="px-4 py-1.5 rounded-full text-xs text-white" style={{ background: 'var(--accent-silver)' }}>
+                      重试
+                    </button>
+                    <a href={activeTab.url} target="_blank" rel="noopener noreferrer"
+                      className="px-4 py-1.5 rounded-full text-xs text-[var(--text-secondary)] flex items-center gap-1" style={{ background: 'var(--bg-input)' }}>
+                      <ExternalLink size={12} /> 新窗口打开
+                    </a>
+                    <button onClick={goBack}
+                      className="px-4 py-1.5 rounded-full text-xs text-[var(--text-secondary)]" style={{ background: 'var(--bg-input)' }}>
+                      返回
+                    </button>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-sm font-medium text-[var(--text-primary)] mb-1">正在导航至</h3>
-              <p className="text-xs text-[var(--text-muted)] mb-4 max-w-md truncate px-4">{activeTab.url}</p>
-              <p className="text-[11px] text-[var(--text-muted)] max-w-xs">
-                出于安全考虑，外部页面无法在 WebOS 内加载。
-                该网址已记录在您的浏览历史中。
-              </p>
-              <div className="flex gap-2 justify-center mt-4">
-                <button onClick={goHome}
-                  className="px-4 py-1.5 rounded-full text-xs text-white" style={{ background: 'var(--accent-silver)' }}>
-                  返回主页
-                </button>
-                <button onClick={goBack}
-                  className="px-4 py-1.5 rounded-full text-xs text-[var(--text-secondary)]" style={{ background: 'var(--bg-input)' }}>
-                  返回
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>

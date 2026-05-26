@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { LayoutGrid, Wifi, Volume2, Battery, Bell, Search } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { LayoutGrid, Wifi, Volume2, Battery, Bell, Search, Maximize, Minimize } from 'lucide-react';
 import { useSystemStore } from '@/stores/useSystemStore';
 import { useWindowStore } from '@/stores/useWindowStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -18,6 +18,21 @@ export default function TopPanel({ onOpenAppMenu }: TopPanelProps) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showWifi, setShowWifi] = useState(false);
   const [showVol, setShowVol] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
   const timeFormat = useSettingsStore((s) => s.timeFormat);
   const wifiNetworks = useSettingsStore((s) => s.wifiNetworks);
   const wifiEnabled = useSettingsStore((s) => s.wifiEnabled);
@@ -122,6 +137,11 @@ export default function TopPanel({ onOpenAppMenu }: TopPanelProps) {
         <div className="flex items-center gap-1 px-1.5">
           <Battery size={16} className="text-green-400" />
         </div>
+
+        {/* Fullscreen */}
+        <button onClick={toggleFullscreen} className="p-1.5 rounded hover:bg-white/10 transition-colors" title={isFullscreen ? '退出全屏' : '全屏模式'}>
+          {isFullscreen ? <Minimize size={14} className="text-white" /> : <Maximize size={14} className="text-white" />}
+        </button>
 
         {/* Notifications */}
         <button onClick={(e) => { e.stopPropagation(); setShowNotifs(!showNotifs); }} className="relative p-1.5 rounded hover:bg-white/10 transition-colors">

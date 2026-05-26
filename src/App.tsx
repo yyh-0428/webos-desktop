@@ -13,6 +13,7 @@ export default function App() {
   const windows = useWindowStore((s) => s.windows);
   const activeWorkspace = useSystemStore((s) => s.activeWorkspace);
   const [appMenuOpen, setAppMenuOpen] = useState(false);
+  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
 
   // Clock tick
   useEffect(() => {
@@ -30,6 +31,17 @@ export default function App() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
+
+  // Auto-hide fullscreen prompt when already fullscreen
+  useEffect(() => {
+    const handler = () => { if (document.fullscreenElement) setShowFullscreenPrompt(false); };
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
+  const enterFullscreen = () => {
+    document.documentElement.requestFullscreen().then(() => setShowFullscreenPrompt(false)).catch(() => setShowFullscreenPrompt(false));
+  };
 
   // Dynamic CSS variables from settings
   const accentColor = useSettingsStore((s) => s.accentColor);
@@ -55,6 +67,24 @@ export default function App() {
   // Desktop phase
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ background: 'var(--bg-base)' }}>
+      {/* Fullscreen prompt */}
+      {showFullscreenPrompt && !document.fullscreenElement && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center cursor-pointer" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={enterFullscreen}>
+          <div className="text-center">
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ background: 'linear-gradient(135deg, #4a5568, #2d3748)' }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-light text-white mb-3 tracking-wide">WebOS</h2>
+            <p className="text-white/60 text-sm mb-6">点击任意位置进入全屏模式</p>
+            <button onClick={(e) => { e.stopPropagation(); setShowFullscreenPrompt(false); }} className="text-white/40 text-xs hover:text-white/70 transition-colors">
+              跳过，使用窗口模式
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Desktop */}
       <Desktop onOpenAppMenu={() => setAppMenuOpen(true)} />
 

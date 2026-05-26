@@ -107,8 +107,8 @@ export default function Desktop({ onOpenAppMenu }: DesktopProps) {
                 }
               }}
             >
-              <IconComp size={48} className="text-[var(--text-primary)] mb-1" />
-              <span className="text-[11px] text-[var(--text-primary)] text-center leading-tight max-w-full break-words">
+              <IconComp size={48} className="text-white mb-1 drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]" />
+              <span className="text-[11px] text-white text-center leading-tight max-w-full break-words" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>
                 {icon.label}
               </span>
             </button>

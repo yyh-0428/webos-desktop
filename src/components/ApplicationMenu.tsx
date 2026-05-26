@@ -15,6 +15,18 @@ const categoryOrder = ['Favorites', 'Accessories', 'Development', 'Internet', 'O
 
 const favorites = ['terminal', 'filemanager', 'browser', 'texteditor', 'settings', 'calculator', 'calendar', 'taskmanager'];
 
+const categoryColors: Record<string, { bg: string; icon: string }> = {
+  System: { bg: 'linear-gradient(135deg, #4a5568, #2d3748)', icon: '#e2e8f0' },
+  Accessories: { bg: 'linear-gradient(135deg, #5a6acd, #4c51bf)', icon: '#e0e7ff' },
+  Development: { bg: 'linear-gradient(135deg, #059669, #047857)', icon: '#d1fae5' },
+  Internet: { bg: 'linear-gradient(135deg, #2563eb, #1d4ed8)', icon: '#dbeafe' },
+  Office: { bg: 'linear-gradient(135deg, #d97706, #b45309)', icon: '#fef3c7' },
+  Multimedia: { bg: 'linear-gradient(135deg, #dc2626, #b91c1c)', icon: '#fee2e2' },
+  Graphics: { bg: 'linear-gradient(135deg, #7c3aed, #6d28d9)', icon: '#ede9fe' },
+  Games: { bg: 'linear-gradient(135deg, #db2777, #be185d)', icon: '#fce7f3' },
+  Favorites: { bg: 'linear-gradient(135deg, #f59e0b, #d97706)', icon: '#fef3c7' },
+};
+
 export default function ApplicationMenu({ isOpen, onClose }: ApplicationMenuProps) {
   const { t } = useI18n();
   const apps = useAppRegistryStore((s) => s.apps);
@@ -119,7 +131,8 @@ export default function ApplicationMenu({ isOpen, onClose }: ApplicationMenuProp
                   <h3 className="text-xs font-bold uppercase tracking-widest text-white/50 mb-3 px-2">{category === 'Favorites' ? t('menu.favorites') : category === 'All' ? t('menu.all') : t(`category.${category.toLowerCase()}`, category)}</h3>
                   <div className="grid grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
                     {catApps.map((app, i) => {
-                      const IconComp = (Icons as unknown as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[app.icon];
+                      const IconComp = (Icons as unknown as Record<string, React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>>)[app.icon];
+                      const catColor = categoryColors[category] || categoryColors.System;
                       return (
                         <motion.button
                           key={app.id}
@@ -129,8 +142,8 @@ export default function ApplicationMenu({ isOpen, onClose }: ApplicationMenuProp
                           onClick={() => handleOpenApp(app.id)}
                           className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/10 hover:scale-105 transition-all group"
                         >
-                          <div className="w-14 h-14 flex items-center justify-center rounded-xl" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                            {IconComp ? <IconComp size={32} className="text-[var(--accent-silver)]" /> : <span className="text-2xl">?</span>}
+                          <div className="w-14 h-14 flex items-center justify-center rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow" style={{ background: catColor.bg }}>
+                            {IconComp ? <IconComp size={28} style={{ color: catColor.icon }} /> : <span className="text-2xl text-white">?</span>}
                           </div>
                           <span className="text-[11px] text-white text-center leading-tight max-w-full truncate">{app.name}</span>
                         </motion.button>
