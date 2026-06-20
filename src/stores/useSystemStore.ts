@@ -49,7 +49,7 @@ export const useSystemStore = create<SystemState>((set, get) => ({
   bootPhase: 'desktop',
   user: {
     username: 'user',
-    password: '123456',
+    password: '',
     avatar: '/user-avatar.jpg',
   },
   currentTime: new Date(),
@@ -72,7 +72,8 @@ export const useSystemStore = create<SystemState>((set, get) => ({
 
   login: (username, password) => {
     const state = get();
-    if (username === state.user.username && password === state.user.password) {
+    const expected = state.user.password;
+    if (username === state.user.username && (expected === '' || password === expected)) {
       set({ bootPhase: 'desktop' });
       return true;
     }
@@ -146,7 +147,8 @@ export const useSystemStore = create<SystemState>((set, get) => ({
 
   unlock: (password) => {
     const state = get();
-    if (password === state.user.password) {
+    const expected = state.user.password;
+    if (expected === '' || password === expected) {
       set({ isLocked: false });
       return true;
     }
